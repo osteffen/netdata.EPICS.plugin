@@ -1,7 +1,15 @@
 #!/usr/bin/python2.7
-
+import sys
 import epics
 import time
+
+cerr = sys.stderr
+cout = sys.stdout
+
+
+def onConnectionChange(pvname=None, conn= None, **kws):
+    cerr.write('PV connection status changed: %s %s\n' % (pvname,  repr(conn)))
+    cerr.flush()
 
 class Plot:
     """netdata plot comprised of several EPICS PVs"""
@@ -15,20 +23,20 @@ class Plot:
         self.name = Name
         
     def add(self,PVName, Precision):
-        pv = epics.PV(PVName, auto_monitor=True)
+        pv = epics.PV(PVName, auto_monitor=True,  connection_callback= onConnectionChange)
         self.pvs[PVName] = [pv,  Precision]
     
     def CreatePlot(self):
-        print("CREATE %s.1 %s %s " % (self.type, self.name, self.title))
+        cout.write("CREATE %s.1 %s %s\n" % (self.type, self.name, self.title))
         for name, pv in self.pvs.iteritems():
-            print("DIMENSION %s '' absolute 1 %d" % (name,  pv[1]))
+            cout.write("DIMENSION %s '' absolute 1 %d\n" % (name,  pv[1]))
 
     def Update(self):
-        print("BEGIN %s.%s" % (self.type, self.name))
+        cout.write("BEGIN %s.%s\n" % (self.type, self.name))
         for name, pv in self.pvs.iteritems():
             if pv[0].connected ==1:
-                print("SET %s = %d" % (name, pv[0].value * pv[1]))
-        print("END")
+                cout.write("SET %s = %d\n" % (name, pv[0].value * pv[1]))
+        cout.write("END\n")
 
 
 def main():
@@ -36,9 +44,12 @@ def main():
     p.add("Kitchen:Temperature", 1000)
     p.add("LivingRoom:Temperature", 100)
     p.CreatePlot()
+    cout.flush()
     while(True):
         p.Update()
+        cout.flush()
         time.sleep(1)
+
 
 if __name__ == "__main__":
     main()
