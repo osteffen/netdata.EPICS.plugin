@@ -26,7 +26,8 @@ class Plot:
     def Update(self):
         print("BEGIN %s.%s" % (self.type, self.name))
         for name, pv in self.pvs.iteritems():
-            print("SET %s = %s" % (name, pv[0].get() * pv[1]))
+            if pv[0].connected ==1:
+                print("SET %s = %d" % (name, pv[0].value * pv[1]))
         print("END")
 
 
