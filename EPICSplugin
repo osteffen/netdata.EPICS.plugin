@@ -11,42 +11,59 @@ def onConnectionChange(pvname=None, conn= None, **kws):
     cerr.write('PV connection status changed: %s %s\n' % (pvname,  repr(conn)))
     cerr.flush()
 
+class PVWrapper:
+    """Wrapper around a PV. Keeps track of display name and scale factor"""
+    def __init__(self,  Name, PVName,  Precision):
+        self.name=Name
+        self.pv=epics.PV(PVName, auto_monitor=True,  connection_callback= onConnectionChange)
+        self.scale = Precision
+    
+    def PrintDimension(self):
+        cout.write("DIMENSION '%s' '' absolute 1 %d\n" % (self.name,  self.scale))
+    
+    def PrintSet(self):
+        if self.pv.connected == 1:
+            cout.write("SET '%s' = %d\n" % (self.name, self.pv.value * self.scale))
+
 class Plot:
     """netdata plot comprised of several EPICS PVs"""
-    title = ""
-    name= ""
     type = "EPICS"
-    pvs = {}
     
-    def __init__(self, Name,Title="EPICS Plot"):
+    def __init__(self, Name,Title="EPICS Plot", Unit=''):
         self.title = Title
         self.name = Name
-        
-    def add(self,PVName, Precision):
-        pv = epics.PV(PVName, auto_monitor=True,  connection_callback= onConnectionChange)
-        self.pvs[PVName] = [pv,  Precision]
+        self.unit=Unit
+        self.pvs=[]
+    
+    def add(self, Name,  PVName, Precision):
+        self.pvs.append(PVWrapper(Name,  PVName,  Precision))
     
     def CreatePlot(self):
-        cout.write("CHART '%s.%s' '%s' '%s'\n" % (self.type, self.name, self.name, self.title))
-        for name, pv in self.pvs.iteritems():
-            cout.write("DIMENSION '%s' '' absolute 1 %d\n" % (name,  pv[1]))
+        cout.write("CHART '%s.%s' '%s' '%s' '%s'\n" % (self.type, self.name, self.name, self.title, self.unit))
+        for pv in self.pvs:
+            pv.PrintDimension()
 
     def Update(self):
         cout.write("BEGIN '%s.%s'\n" % (self.type, self.name))
-        for name, pv in self.pvs.iteritems():
-            if pv[0].connected ==1:
-                cout.write("SET '%s' = %d\n" % (name, pv[0].value * pv[1]))
+        for pv in self.pvs:
+            pv.PrintSet()
         cout.write("END\n")
 
 
 def main():
-    p = Plot("Plot1")
-    p.add("Kitchen:Temperature", 1000)
-    p.add("LivingRoom:Temperature", 100)
+    #Add some plots for testing...
+    p = Plot("Plot1", "Temperatures", "C")
+    p.add("Kitchen", "Kitchen:Temperature", 1000)
+    p.add("Liningroom","LivingRoom:Temperature", 100)
     p.CreatePlot()
+    p2 = Plot("Plot2", "Humidity", "%")
+    p2.add("Kitchen", "Kitchen:Humidity", 1000)
+    p2.add("Liningroom","LivingRoom:Humidity", 100)
+    p2.CreatePlot()
     cout.flush()
     while(True):
         p.Update()
+        p2.Update()
         cout.flush()
         time.sleep(1)
 
