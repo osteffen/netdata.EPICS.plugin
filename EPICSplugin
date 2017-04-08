@@ -27,15 +27,15 @@ class Plot:
         self.pvs[PVName] = [pv,  Precision]
     
     def CreatePlot(self):
-        cout.write("CREATE %s.1 %s %s\n" % (self.type, self.name, self.title))
+        cout.write("CHART '%s.%s' '%s' '%s'\n" % (self.type, self.name, self.name, self.title))
         for name, pv in self.pvs.iteritems():
-            cout.write("DIMENSION %s '' absolute 1 %d\n" % (name,  pv[1]))
+            cout.write("DIMENSION '%s' '' absolute 1 %d\n" % (name,  pv[1]))
 
     def Update(self):
-        cout.write("BEGIN %s.%s\n" % (self.type, self.name))
+        cout.write("BEGIN '%s.%s'\n" % (self.type, self.name))
         for name, pv in self.pvs.iteritems():
             if pv[0].connected ==1:
-                cout.write("SET %s = %d\n" % (name, pv[0].value * pv[1]))
+                cout.write("SET '%s' = %d\n" % (name, pv[0].value * pv[1]))
         cout.write("END\n")
 
 
