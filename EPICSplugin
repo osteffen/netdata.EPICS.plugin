@@ -1,0 +1,42 @@
+#!/usr/bin/python2.7
+
+import epics
+import time
+
+class Plot:
+    """netdata plot comprised of several EPICS PVs"""
+    title = ""
+    name= ""
+    type = "EPICS"
+    pvs = {}
+    
+    def __init__(self, Name,Title="EPICS Plot"):
+        self.title = Title
+        self.name = Name
+        
+    def add(self,PVName, Precision):
+        pv = epics.PV(PVName, auto_monitor=True)
+        self.pvs[PVName] = [pv,  Precision]
+    
+    def CreatePlot(self):
+        print("CREATE %s.1 %s %s " % (self.type, self.name, self.title))
+        for name, pv in self.pvs.iteritems():
+            print("DIMENSION %s '' absolute 1 %d" % (name,  pv[1]))
+
+    def Update(self):
+        print("BEGIN %s.%s" % (self.type, self.name))
+        for name, pv in self.pvs.iteritems():
+            print("SET %s = %s" % (name, pv[0].get() * pv[1]))
+        print("END")
+
+
+def main():
+    p = Plot("Plot1")
+    p.add("Kitchen:Temperature", 1000)
+    p.CreatePlot()
+    while(True):
+        p.Update()
+        time.sleep(1)
+
+if __name__ == "__main__":
+    main()
